@@ -14,6 +14,10 @@ extern uint vectors[];  // in vectors.S: array of 256 entry pointers
 struct spinlock tickslock;
 uint ticks;
 
+//Final lab
+int
+mappages(pde_t *pgdir, void *va, uint size, uint pa, int perm);
+
 void
 tvinit(void)
 {
@@ -86,6 +90,26 @@ trap(struct trapframe *tf)
               tf->trapno, cpu->id, tf->eip, rcr2());
       panic("trap");
     }
+
+    if(tf->trapno == T_PGFLT){
+      char *mem;
+      uint a;
+      uint newsz = proc->sz;
+      a = PGROUNDDOWN(rcr2());
+      for(; a < newsz; a += PGSIZE){
+        mem = kalloc();
+    /*
+        if(mem == 0){
+          cprintf("allocuvm out of memory\n");
+          deallocuvm(pgdir, newsz, oldsz);
+          return 0;
+        }
+    */
+        memset(mem, 0, PGSIZE);
+        mappages(proc->pgdir, (char*)a, PGSIZE, v2p(mem), PTE_W|PTE_U);
+      }
+      return;
+    } 
     // In user space, assume process misbehaved.
     cprintf("pid %d %s: trap %d err %d on cpu %d "
             "eip 0x%x addr 0x%x--kill proc\n",
